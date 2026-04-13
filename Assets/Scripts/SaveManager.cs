@@ -1,117 +1,138 @@
 using System.IO;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class SaveManager : MonoBehaviour
 {
-    public static SaveManager Instance;
-    public int bestScore;
-    public string playerName;
-    public string championName;
+    private const string DefaultPlayerName = "Player";
+    private const string FileName = "savefile.json";
+
+    private static SaveManager instance;
+    public static SaveManager Instance
+    {
+        get
+        {
+            if (instance == null)
+                instance = FindObjectOfType<SaveManager>();
+            return instance;
+        }
+    }
+
+    public int bestScore { get; protected set; }
+    public string championName { get; protected set; } = DefaultPlayerName;
+    public string playerName { get; set; } = DefaultPlayerName;
+    
+    private string SaveFilePath => Path.Combine(Application.persistentDataPath, FileName);
+    private bool isInitialized;
 
     private void Awake()
     {
-        if (Instance != null)
+        if (instance != null && instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
-        Instance = this;
+        instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // Гарантируем загрузку перед первым использованием
         if (!isInitialized)
         {
-            LoadSave();
+            Load();
             isInitialized = true;
         }
     }
 
-private bool isInitialized = false;
-
     [System.Serializable]
-    class SaveData
+    private class SaveData
     {
         public int bestScore;
         public string playerName;
         public string championName;
     }
 
-    public void SaveSave()
+    public void Save()
     {
-        SaveData data = new SaveData();
-        data.bestScore = bestScore;
-        data.playerName = playerName; // Всегда сохраняем имя
-        data.championName = championName;
+        var data = new SaveData
+        {
+            bestScore = bestScore,
+            playerName = playerName,
+            championName = championName
+        };
 
         string json = JsonUtility.ToJson(data);
-        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
-    }
-    private void OnApplicationQuit()
-    {
-        SaveSave();
-    }
-
-    public void LoadSave()
-    {
-        string path = Application.persistentDataPath + "/savefile.json";
-        Debug.Log("Loading from: " + path);
-
-        if (File.Exists(path))
+        try
         {
-            string json = File.ReadAllText(path);
+            File.WriteAllText(SaveFilePath, json);
+            Debug.Log($"Saved to {SaveFilePath}");
+        }
+        catch (IOException e)
+        {
+            Debug.LogError($"Failed to save: {e.Message}");
+        }
+    }
+
+    public void Load()
+    {
+        if (!File.Exists(SaveFilePath))
+        {
+            SetDefaultValues();
+            Debug.Log("No save file found. Using defaults.");
+            return;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(SaveFilePath);
             SaveData data = JsonUtility.FromJson<SaveData>(json);
 
             bestScore = data.bestScore;
-            playerName = string.IsNullOrEmpty(data.playerName) ? "Player" : data.playerName;
-            championName=string.IsNullOrEmpty(data.championName) ? "Player" : data.championName;
+            playerName = string.IsNullOrEmpty(data.playerName) ? DefaultPlayerName : data.playerName;
+            championName = string.IsNullOrEmpty(data.championName) ? DefaultPlayerName : data.championName;
 
             Debug.Log($"Loaded: {playerName} | {bestScore}");
         }
-        else
+        catch (IOException e)
         {
-            bestScore = 0;
-            playerName = "Player"; // Значение по умолчанию
-            Debug.Log("No save file found. Using default values.");
+            Debug.LogError($"Failed to load save: {e.Message}");
+            SetDefaultValues();
         }
     }
-    public void DeleteSave()
-{
-    string path = Application.persistentDataPath + "/savefile.json";
-    
-    try
-    {
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-            Debug.Log("Сохранение успешно удалено");
-            
-            // Сбрасываем значения на значения по умолчанию
-            bestScore = 0;
-            playerName = "";
-            
-            // Сохраняем "пустые" данные (опционально)
-            SaveSave();
-        }
-        else
-        {
-            Debug.Log("Файл сохранения не найден");
-        }
-    }
-    catch (System.Exception e)
-    {
-        Debug.LogError($"Ошибка при удалении сохранения: {e.Message}");
-    }
-}
 
-    // Обновляет рекорд, если текущий счет больше
+    public void DeleteSave()
+    {
+        try
+        {
+            if (File.Exists(SaveFilePath))
+            {
+                File.Delete(SaveFilePath);
+                Debug.Log("Save file deleted.");
+            }
+            SetDefaultValues();
+        }
+        catch (IOException e)
+        {
+            Debug.LogError($"Error deleting save: {e.Message}");
+        }
+    }
+
     public void UpdateBestScore(int currentScore)
     {
         if (currentScore > bestScore)
         {
             bestScore = currentScore;
             championName = playerName;
-            SaveSave();
+            Save();
         }
     }
+
+    private void SetDefaultValues()
+    {
+        bestScore = 0;
+        playerName = DefaultPlayerName;
+        championName = DefaultPlayerName;
+    }
+
+    private void OnApplicationQuit() => Save();
+    private void OnApplicationPause(bool pauseStatus) { if (pauseStatus) Save(); }
 }

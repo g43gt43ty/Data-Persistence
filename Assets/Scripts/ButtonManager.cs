@@ -6,12 +6,12 @@ public class ButtonManager : MonoBehaviour
 {
     public void StartNew()
     {
-        SaveManager.Instance.LoadSave();
+        SaveManager.Instance.Load();
         SceneManager.LoadScene(1);
     }
     public void Exit()
     {
-        SaveManager.Instance.SaveSave();
+        SaveManager.Instance.Save();
 #if UNITY_EDITOR
         EditorApplication.ExitPlaymode();
 #else
@@ -20,9 +20,9 @@ public class ButtonManager : MonoBehaviour
     }
     public void GoMenu()
     {
-        SaveManager.Instance.SaveSave();
+        SaveManager.Instance.Save();
         SceneManager.LoadScene(0);
-        SaveManager.Instance.SaveSave();
+        SaveManager.Instance.Save();
     }
     public void Erase()
     {

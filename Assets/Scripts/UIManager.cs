@@ -50,7 +50,7 @@ public void OnNameChanged(string newName)
     if (SaveManager.Instance != null)
     {
         SaveManager.Instance.playerName = newName;
-        SaveManager.Instance.SaveSave();
+        SaveManager.Instance.Save();
     }
     else
     {
