@@ -7,14 +7,14 @@ public class SaveManager : MonoBehaviour
     private const string DefaultPlayerName = "Player";
     private const string FileName = "savefile.json";
 
-    private static SaveManager instance;
+    private static SaveManager _instance;
     public static SaveManager Instance
     {
         get
         {
-            if (instance == null)
-                instance = FindObjectOfType<SaveManager>();
-            return instance;
+            if (_instance == null)
+                _instance = FindObjectOfType<SaveManager>();
+            return _instance;
         }
     }
 
@@ -27,13 +27,13 @@ public class SaveManager : MonoBehaviour
 
     private void Awake()
     {
-        if (instance != null && instance != this)
+        if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
-        instance = this;
+        _instance = this;
         DontDestroyOnLoad(gameObject);
 
         if (!isInitialized)
